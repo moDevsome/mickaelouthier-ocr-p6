@@ -1,0 +1,25 @@
+{
+  "name": "mickaelouthier-ocr-p6",
+  "version": "1.0.0",
+  "description": "Répertoire du projet numéro 6 \"Piiquante\" de la formation Developpeur web d'Openclassroom : Construisez une API sécurisée pour une application d'avis gastronomiques.",
+  "main": "./src/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node ./src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moDevsome/mickaelouthier-ocr-p6.git"
+  },
+  "author": "Mickaël Outhier",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/moDevsome/mickaelouthier-ocr-p6/issues"
+  },
+  "homepage": "https://github.com/moDevsome/mickaelouthier-ocr-p6#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^6.7.5",
+    "nodemon": "^2.0.20"
+  }
+}
