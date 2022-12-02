@@ -4,11 +4,12 @@
 
 // Importe Express et créer une nouvelle instance de l'application
 const express = require('express');
-const app = express(); // application Express
+const api = express(); // application Express
 
-app.get('/', (req, res) => {
-    res.write('Work in Progress');
+api.get('/', (req, res) => {
+
+    res.write('Hello les gens, API dispo !!');
     res.end();
 });
 
- module.exports = app;
+ module.exports = api;

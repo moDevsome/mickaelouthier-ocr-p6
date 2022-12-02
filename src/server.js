@@ -2,16 +2,64 @@
  * Point d'entrée du serveur Web
  */
 
-console.log('Démarrage de l\'API...');
-require('http').createServer( require('./app') ).listen(3000)
+const log = require('./consoleLog');
+const fs = require('fs');
+const mongoose = require('mongoose');
+
+/**
+ * Démarrage du serveur web et Connexion à la base de données
+ */
+log.output('-- Démarrage de l\'API...');
+require('http').createServer( require('./api') ).listen(3000)
     .on('error', (error) => {
 
-        console.error('\x1b[31m=> Echec du démarrage de L\'API\x1b[0m')
+        log.output('=> Echec du démarrage de l\'API', 'error');
         console.error(error);
 
     })
     .on('listening', () => {
 
-        console.log('\x1b[32m=> L\'API est disponible sur l\'URL http://localhost:3000\x1b[0m');
+        log.output('=> L\'API est disponible sur l\'URL http://localhost:3000', 'success');
 
-    })
+        // Parse le fichier JSON contenant les informations de connexion à la base de données
+        const mongoconfFilePath = __dirname.replace('src', '.mongoconf');
+        let mongoconf = {};
+        try {
+
+            if(!fs.existsSync(mongoconfFilePath)) {
+
+                throw 'Le fichier n\'existe pas.';
+
+            }
+
+            mongoconf = JSON.parse(fs.readFileSync(mongoconfFilePath));
+
+        }
+        catch(error) {
+
+            log.output('Echec de la récuperation des accès à la base de données via le fichier de configuration.', 'error');
+            log.output(error, 'error');
+            process.exit();
+
+        }
+
+        log.output('-- Connexion à la base de données MongoDB...');
+        mongoose.connect(
+            'mongodb+srv://'+ mongoconf.db_user +':'+ mongoconf.db_pass +'@'+ mongoconf.db_cluster +'/?retryWrites=true&w=majority', {
+                useNewUrlParser: true,
+                useUnifiedTopology: true
+            })
+            .then(() => {
+
+                log.output('=> Réussite de la connexion à la base de données MongoDB.', 'success');
+
+            })
+            .catch(error => {
+
+                log.output('=> Echec de la connexion à la base de données MongoDB.', 'error');
+                console.error(error);
+                process.exit();
+
+            });
+
+    });
