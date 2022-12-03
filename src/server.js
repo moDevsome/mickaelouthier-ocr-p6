@@ -1,5 +1,7 @@
 /**
+ * -----------------------------
  * Point d'entrée du serveur Web
+ * -----------------------------
  */
 
 const log = require('./consoleLog');
@@ -45,7 +47,7 @@ require('http').createServer( require('./api') ).listen(3000)
 
         log.output('-- Connexion à la base de données MongoDB...');
         mongoose.connect(
-            'mongodb+srv://'+ mongoconf.db_user +':'+ mongoconf.db_pass +'@'+ mongoconf.db_cluster +'/?retryWrites=true&w=majority', {
+            'mongodb+srv://'+ mongoconf.db_user +':'+ mongoconf.db_pass +'@'+ mongoconf.db_cluster +'/'+ mongoconf.db_name +'?retryWrites=true&w=majority', {
                 useNewUrlParser: true,
                 useUnifiedTopology: true
             })
