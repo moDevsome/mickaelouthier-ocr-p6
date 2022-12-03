@@ -1,5 +1,7 @@
 /**
+ * -----------------------
  * Point d'entrée de l'API
+ * -----------------------
  */
 
 // Importe Express et créer une nouvelle instance de l'API
@@ -21,13 +23,9 @@ api.use((request, response, next) => {
 
 });
 
-api.get('/', (request, res) => {
+// Importation des routers
+const authRouter = require('./routes/auth');
 
-    console.log(request);
+api.use('/api/auth', authRouter);
 
-    res.write('Hello les gens, API !!');
-    res.end();
-
-});
-
- module.exports = api;
+module.exports = api;
