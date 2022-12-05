@@ -7,6 +7,36 @@
 const log = require('./consoleLog');
 const fs = require('fs');
 const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const { resolve } = require('path');
+const { rejects } = require('assert');
+
+/**
+ * Fonction interne permettant de charger la configuration à partir du fichier ".env" se trouvant à la racine du répertoire d'execution de l'API
+ *r
+ * @return Promise
+*/
+function loadConfiguration() {
+
+    return new Promise((resolve, reject) => {
+
+        // Chargement du fichier de configuration
+        dotenv.config();
+        const envKeys = Object.keys(process.env);
+        const apiEnvKeys = ['PIQUAPI_DB_CLUSTER','PIQUAPI_DB_NAME','PIQUAPI_DB_USER','PIQUAPI_DB_PASS','PIQUAPI_TKN_SECRET_KEY','PIQUAPI_DEV'];
+        let matchKeyCounter = 0;
+        apiEnvKeys.forEach(apiEnvKey => {
+
+            if(envKeys.includes(apiEnvKey)) matchKeyCounter++;
+
+        });
+
+        if(matchKeyCounter === apiEnvKeys.length) resolve();
+        else reject();
+
+    })
+
+}
 
 /**
  * Démarrage du serveur web et Connexion à la base de données
@@ -19,35 +49,28 @@ require('http').createServer( require('./api') ).listen(3000)
         console.error(error);
 
     })
-    .on('listening', () => {
+    .on('listening', async () => {
 
         log.output('=> L\'API est disponible sur l\'URL http://localhost:3000', 'success');
 
-        // Parse le fichier JSON contenant les informations de connexion à la base de données
-        const mongoconfFilePath = __dirname.replace('src', '.mongoconf');
-        let mongoconf = {};
-        try {
+        log.output('-- Chargement du fichier de configuration...');
+        await loadConfiguration()
+            .then(() => {
 
-            if(!fs.existsSync(mongoconfFilePath)) {
+                log.output('=> Réussite du chargement de la configuration.', 'success');
 
-                throw 'Le fichier n\'existe pas.';
+            })
+            .catch(() => {
 
-            }
+                log.output('=> Échec du chargement de la configuration. Le fichier ".env" est absent ou corrompu.', 'error');
+                process.exit();
 
-            mongoconf = JSON.parse(fs.readFileSync(mongoconfFilePath));
+            })
 
-        }
-        catch(error) {
-
-            log.output('Echec de la récuperation des accès à la base de données via le fichier de configuration.', 'error');
-            log.output(error, 'error');
-            process.exit();
-
-        }
 
         log.output('-- Connexion à la base de données MongoDB...');
         mongoose.connect(
-            'mongodb+srv://'+ mongoconf.db_user +':'+ mongoconf.db_pass +'@'+ mongoconf.db_cluster +'/'+ mongoconf.db_name +'?retryWrites=true&w=majority', {
+            'mongodb+srv://'+ process.env.PIQUAPI_DB_USER +':'+ process.env.PIQUAPI_DB_PASS +'@'+ process.env.PIQUAPI_DB_CLUSTER +'/'+ process.env.PIQUAPI_DB_NAME +'?retryWrites=true&w=majority', {
                 useNewUrlParser: true,
                 useUnifiedTopology: true
             })
