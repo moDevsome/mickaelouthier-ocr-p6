@@ -26,6 +26,7 @@ let bannIP = {};
 */
 const emailValidator = (email) => {
 
+    // TODO: il faut améliorer la regex ! le "-" n'est pas géré !!
     return /^((?!\.)[\w-_.]*[^.])(@\w+)(\.\w+(\.\w+)?[^.\W])$/gim.test(email);
 
 }
@@ -163,6 +164,8 @@ exports.signUp = (request, response) => {
 */
 exports.login = (request, response) => {
 
+    log.output('Connexion de l\'utilisateur...');
+
     // ----- Protection contre les attaques par force brut / Etage 1 -----
     // On définie l'IP et on bloque la requête si l'IP est bannie
     const ip = request.headers['x-forwarded-for'] || request.socket.remoteAddress || '';
@@ -200,7 +203,7 @@ exports.login = (request, response) => {
                         if(result === false) { // Le mot de passe n'est pas correcte
 
                             // ----- Protection contre les attaques par force brut / Etage 2 -----
-                            // On stoque l'IP dans le buffer bannIP
+                            // On stock l'IP dans le buffer bannIP
                             /*
                             On limite le nombre d'octet à 300 000 pour ne pas occuper plus de 5 Mo de RAM
                             on part du fait que 3 IP = 53 octets occupés
@@ -227,11 +230,11 @@ exports.login = (request, response) => {
 
                             try {
 
-                                // TODO:utiliser une clé sécurisée pour le token
+                                log.output('=> Réussite de la connexion de l\'utilisateur.', 'success')
                                 return response.status(200).json(
                                     {
                                         userId: userEntity._id,
-                                        token: jwt.sign({ _id : userEntity._id }, 'RANDOM_TOKEN_SECRET', { expiresIn: '2h' })
+                                        token: jwt.sign({ _id : userEntity._id }, process.env.PIQUAPI_TKN_SECRET_KEY, { expiresIn: '2h' })
                                     }
                                 );
 
