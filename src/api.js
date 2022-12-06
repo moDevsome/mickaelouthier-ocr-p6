@@ -25,7 +25,10 @@ api.use((request, response, next) => {
 
 // Importation des routers
 const authRouter = require('./routes/auth');
+const saucesRouter = require('./routes/sauces');
 
 api.use('/api/auth', authRouter);
+
+api.use('/api/sauces', saucesRouter);
 
 module.exports = api;
