@@ -17,6 +17,9 @@ const saucesController = require('../controllers/sauces');
 // On import le middleware "auth"
 const authMiddleware = require('../middleware/auth');
 
+// On import le middleware "image-upload"
+const imageUploadMiddleware = require('../middleware/image-upload');
+
 /**
  * GET /api/sauces
  **/
@@ -30,7 +33,7 @@ router.get('/:id', authMiddleware, saucesController.getSauce);
 /**
  * POST /api/sauces
  **/
-router.post('/', authMiddleware, saucesController.postSauce);
+router.post('/', authMiddleware, imageUploadMiddleware, saucesController.postSauce);
 
 /**
  * PUT /api/sauces/:id
