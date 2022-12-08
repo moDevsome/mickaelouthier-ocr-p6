@@ -24,7 +24,7 @@
       likes: { type: Number, required: true },
       dislikes: { type: Number, required: true },
       usersLiked: { type: [String], required: true },
-      usersDislike: { type: [String], required: true }
+      usersDisliked: { type: [String], required: true }
  });
  sauceSchema.plugin(mongooseUniqueValidator); // On associe le plugin "mongoose-unique-validator" pour qu'une vérification automatique de l'unicité du userId soit effectuée
 
