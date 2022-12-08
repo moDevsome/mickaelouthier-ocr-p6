@@ -78,10 +78,19 @@ exports.getSauces = (request, response) => {
  * @param response La réponse Htpp
  * @return Response
 */
-// TODO:développer le corps de la méthode
 exports.getSauce = (request, response) => {
 
-    return response.status(200).json({});
+    sauceModel.findOne({
+        _id: request.params.id
+    })
+    .then(
+        sauce => response.status(200).json(sauce)
+    )
+    .catch(
+        error => response.status(500).json({
+            error
+        })
+    );
 
 }
 
