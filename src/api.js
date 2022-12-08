@@ -28,7 +28,9 @@ const authRouter = require('./routes/auth');
 const saucesRouter = require('./routes/sauces');
 
 api.use('/api/auth', authRouter);
-
 api.use('/api/sauces', saucesRouter);
+
+// Permet de charger les images depuis le front en routant l'URL "/images" vers le dossier statique "images"
+api.use('/images', express.static('images'));
 
 module.exports = api;

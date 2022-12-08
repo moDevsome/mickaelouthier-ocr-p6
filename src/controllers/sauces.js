@@ -52,11 +52,17 @@ const dataSanitize = (sauceData) => {
  * @param response La réponse Htpp
  * @return Response
 */
-// TODO:développer le corps de la méthode
 exports.getSauces = (request, response) => {
 
-    console.log('GET /api/sauces');
-    return response.status(200).json([]);
+    sauceModel.find()
+    .then(
+        sauces => response.status(200).json(sauces)
+    )
+    .catch(
+        error => response.status(500).json({
+            error
+        })
+    );
 
 }
 
