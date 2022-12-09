@@ -195,17 +195,22 @@ exports.postSauce = async (request, response) => {
             log.output('=> Echec de la création de la sauce en base de données', 'error');
 
             // On supprime l'image pour éviter une consommation illégitime de l'espace disque
-            fs.unlink(imageFilePath, (error) => {
+            deleteImage(sauceData.imageUrl)
+                .then(() => {
 
-                if(error) log.output('Erreur à la suppression de l\'image.', 'error');
-                else log.output('L\'image a été supprimée.');
+                    log.output('L\'image a été supprimée.','success');
+
+                })
+                .catch(error => {
+
+                    log.output('Erreur à la suppression de l\'image.', 'error');
+                    log.output(error.message ,'error');
+
+                })
 
                 return response.status(500).json(
-                    { message: saveError }
+                    { saveError }
                 )
-
-            });
-
         });
 
 }
@@ -236,7 +241,7 @@ exports.putSauce = async (request, response) => {
     }
 
     let sauceData = {};
-    if(imageFilename === 'NO-image') {
+    if(imageFilename === 'NO-image') { // L'image n'est pas mise à jour
 
         // Filtre les données
         sauceData = await dataSanitize(request.body);
@@ -291,6 +296,8 @@ exports.putSauce = async (request, response) => {
             if(sauce === null) throw new Error('=> La sauce n\'a pas été trouvée en base de données');
             else log.output('=> La sauce a été trouvée en base de données', 'success');
 
+            const currentImageFilename = sauce.imageUrl;
+
             log.output('-- Mise à jour de la sauce en base de données');
             sauceModel.updateOne(where, sauceData)
                 .then(result => {
@@ -298,6 +305,24 @@ exports.putSauce = async (request, response) => {
                     if(result.modifiedCount === 1) {
 
                         log.output('=> Réussite de la mise à jour de la sauce en base de données.', 'success');
+
+                        // Si l'image a été mise à jour, on supprime l'ancienne image
+                        if(imageFilename !== 'NO-image') {
+
+                            deleteImage(currentImageFilename)
+                                .then(() => {
+
+                                    log.output('L\'ancienne image a été supprimée.','success');
+
+                                })
+                                .catch(error => {
+
+                                    log.output('L\'ancienne image n\'a pas été supprimée.', 'error');
+                                    log.output(error.message ,'error');
+
+                                })
+
+                        }
 
                         return response.status(200).json({
                             message : 'La sauce a bien été mise à jour.'
@@ -316,6 +341,25 @@ exports.putSauce = async (request, response) => {
 
                     log.output('=> Echec de la mise à jour de la sauce en base de données.', 'error');
                     log.output(error.message, 'error');
+
+                    // On supprime la nouvelle image pour éviter une consommation illégitime de l'espace disque
+                    if(imageFilename !== 'NO-image') {
+
+                        deleteImage(sauce.imageUrl)
+                            .then(() => {
+
+                                log.output('L\'image a été supprimée.','success');
+
+                            })
+                            .catch(error => {
+
+                                log.output('Erreur à la suppression de l\'image.', 'error');
+                                log.output(error.message ,'error');
+
+                            })
+
+                    }
+
                     return response.status(400).json({ error });
 
                 });
