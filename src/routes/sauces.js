@@ -38,7 +38,7 @@ router.post('/', authMiddleware, imageUploadMiddleware, saucesController.postSau
 /**
  * PUT /api/sauces/:id
  **/
-router.put('/:id', authMiddleware, saucesController.putSauce);
+router.put('/:id', authMiddleware, imageUploadMiddleware, saucesController.putSauce);
 
  /**
  * DELETE /api/sauces/:id

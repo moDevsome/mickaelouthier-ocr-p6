@@ -10,8 +10,6 @@ const fs = require('fs');
 const os = require('os');
 
 const sauceModel = require('../models/sauce');
-const { resolve } = require('path');
-const { reject } = require('bcrypt/promises');
 
 /**
  * Fonction interne permettant de filtrer le contenu de chaque données envoyées par le formulaire
@@ -24,15 +22,16 @@ const dataSanitize = (sauceData) => {
 
     return new Promise((resolve) => {
 
-        const keys = Object.keys(sauceData);
+        const keys = ['name', 'manufacturer', 'description', 'mainPepper', 'heat'];
+        let output = {};
         let i = 0;
         keys.forEach(key => {
 
             let str = sauceData[key].toString();
-            sauceData[key] = str.replace(/(<([^>]+)>)/gi, '');
+            output[key] = str.replace(/(<([^>]+)>)/gi, '');
             i++;
 
-            if(i === key.length) resolve(sauceData);
+            if(i === keys.length) resolve(output);
 
         })
 
@@ -147,6 +146,7 @@ exports.postSauce = async (request, response) => {
     }
 
     // Enregistrement de la Sauce en base de données
+    sauceData.userId = request.locals.userId;
     const sauceEntity = sauceModel({
         ...sauceData,
         likes: 0,
@@ -201,12 +201,107 @@ exports.postSauce = async (request, response) => {
  * @param response La réponse Htpp
  * @return Response
 */
-// TODO:développer le corps de la méthode
-exports.putSauce = (request, response) => {
+exports.putSauce = async (request, response) => {
 
-    return response.status(200).json({
-        message : 'La sauce a bien été mise à jour.'
-    });
+    let imageFilename = 'NO-image';
+    if(typeof(request.file) !== 'undefined' && typeof(request.file.filename) === 'string') {
+
+        imageFilename = request.file.filename || 'NO-image';
+
+    }
+
+    let sauceData = {};
+    if(imageFilename === 'NO-image') {
+
+        // Filtre les données
+        sauceData = await dataSanitize(request.body);
+
+    }
+    else {
+
+        // Parse le request body
+        try {
+
+            sauceData = JSON.parse(request.body.sauce);
+
+        }
+        catch(error) {
+
+            log.output('Echec lors du parse du request body. '+ error.message);
+            return response.status(500).json({ error });
+
+        }
+
+        // Filtre les données
+        sauceData = await dataSanitize(sauceData);
+
+        // Vérifie l'existence de l'image et définie l'URL
+        const osSeparator = os.homedir().split('\\').length ? '\\' : '/';
+        const imageFilePath = process.cwd() + osSeparator +'images'+ osSeparator + imageFilename;
+        if(!fs.existsSync(imageFilePath)) {
+
+            log.output('Echec du téléchargement de l\'image.');
+            return response.status(500).json({
+                message: 'Echec du téléchargement de l\'image.'
+            });
+
+        }
+        else {
+
+            sauceData.imageUrl = request.protocol +'://'+ request.get('host') +'/images/'+ imageFilename;
+
+        }
+
+    }
+
+    const where = {
+        _id: request.params.id,
+        userId: request.locals.userId
+    };
+
+    log.output('-- Recherche de la sauce en base de données avec les paramètres : '+ JSON.stringify(where));
+    sauceModel.findOne(where)
+        .then(sauce => {
+
+            if(sauce === null) throw new Error('=> La sauce n\'a pas été trouvée en base de données');
+            else log.output('=> La sauce a été trouvée en base de données', 'success');
+
+            log.output('-- Mise à jour de la sauce en base de données');
+            sauceModel.updateOne(where, sauceData)
+                .then(result => {
+
+                    if(result.modifiedCount === 1) {
+
+                        log.output('=> Réussite de la mise à jour de la sauce en base de données.', 'success');
+
+                        return response.status(200).json({
+                            message : 'La sauce a bien été mise à jour.'
+                        });
+
+                    }
+                    else {
+
+                        throw new Error('result.modifiedCount !== 1');
+
+                    }
+
+
+                })
+                .catch(error => {
+
+                    log.output('=> Echec de la mise à jour de la sauce en base de données.', 'error');
+                    log.output(error.message, 'error');
+                    return response.status(400).json({ error });
+
+                });
+
+        })
+        .catch(error => {
+
+            log.output(error.message, 'error');
+            return response.status(400).json({ error });
+
+        });
 
 }
 
