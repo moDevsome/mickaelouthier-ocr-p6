@@ -8,6 +8,7 @@
 const log = require('../consoleLog');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
 
 const sauceModel = require('../models/sauce');
 
@@ -34,6 +35,30 @@ const dataSanitize = (sauceData) => {
             if(i === keys.length) resolve(output);
 
         })
+
+    })
+
+}
+
+/**
+ * Fonction interne permettant de supprimer l'image d'une sauce
+ *
+ * @param imageUrl chaine de caractère représentant l'URL de l'image
+ * @return Promise resolve => l'image a été supprimée, reject => l'image n'a pas été supprimée
+*/
+const deleteImage = (imageUrl) => {
+
+    return new Promise((resolve, reject) => {
+
+        const imageFilename = path.basename(imageUrl);
+        const osSeparator = os.homedir().split('\\').length ? '\\' : '/';
+        const imageFilePath = process.cwd() + osSeparator +'images'+ osSeparator + imageFilename;
+        fs.unlink(imageFilePath, (error) => {
+
+            if(error) reject(error);
+            else resolve();
+
+        });
 
     })
 
@@ -317,12 +342,72 @@ exports.putSauce = async (request, response) => {
  * @param response La réponse Htpp
  * @return Response
 */
-// TODO:développer le corps de la méthode
 exports.deleteSauce = (request, response) => {
 
-    return response.status(200).json({
-        message : 'La sauce a bien été supprimée.'
-    });
+    const where = {
+        _id: request.params.id,
+        userId: request.locals.userId
+    };
+
+    log.output('-- Recherche de la sauce en base de données avec les paramètres : '+ JSON.stringify(where));
+    sauceModel.findOne(where)
+        .then(sauce => {
+
+            if(sauce === null) throw new Error('=> La sauce n\'a pas été trouvée en base de données');
+            else log.output('=> La sauce a été trouvée en base de données', 'success');
+
+            log.output('-- Suppression de la sauce');
+            console.log(path.basename(sauce.imageUrl));
+
+            sauceModel.deleteOne(where)
+                .then(result => {
+
+
+                    if(result.deletedCount === 1) {
+
+                        log.output('=> Réussite de la suppression de la sauce.', 'success');
+
+                        deleteImage(sauce.imageUrl)
+                            .then(() => {
+
+                                log.output('L\'image de la sauce a été supprimée.','success');
+
+                            })
+                            .catch(error => {
+
+                                log.output('L\'image de la sauce n\'a pas été supprimée.','error');
+                                log.output(error.message ,'error');
+
+                            })
+
+                        return response.status(200).json({
+                            message : 'La sauce a bien été supprimée.'
+                        });
+
+                    }
+                    else {
+
+                        throw new Error('result.deletedCount !== 1');
+
+                    }
+
+
+                })
+                .catch(error => {
+
+                    log.output('=> Echec de la suppression de la base.', 'error');
+                    log.output(error.message, 'error');
+                    return response.status(400).json({ error });
+
+                });
+
+        })
+        .catch(error => {
+
+            log.output(error.message, 'error');
+            return response.status(400).json({ error });
+
+        });
 
 }
 
