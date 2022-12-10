@@ -7,6 +7,7 @@
 
 const jwt = require('jsonwebtoken');
 const log = require('../consoleLog');
+const apiError = require('../apiError');
 
 module.exports = (request, response, next) => {
 
@@ -19,12 +20,12 @@ module.exports = (request, response, next) => {
 
         if(typeof(session._id) === 'undefined') {
 
-            log.output('jwt.verify error : La propriété _id n\'existe pas dans l\'objet issu du décodage', 'error');
+            log.error('jwt.verify error : La propriété _id n\'existe pas dans l\'objet issu du décodage');
             throw 'La propriété _id n\'existe pas dans l\'objet issu du décodage';
 
         };
 
-        log.output('=> L\'utilisateur est authentifié');
+        log.success('=> L\'utilisateur est authentifié');
         request.locals = {
             userId: session._id
         }
@@ -33,10 +34,7 @@ module.exports = (request, response, next) => {
     }
     catch(error) {
 
-        log.output('jwt.verify error : '+ error.message, 'error');
-        response.status(403).json({
-            error
-        });
+        return apiError(response, 401, 'Echec de l\'authentification', error);
 
     }
 
