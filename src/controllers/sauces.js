@@ -401,7 +401,6 @@ exports.deleteSauce = (request, response) => {
             else log.output('=> La sauce a été trouvée en base de données', 'success');
 
             log.output('-- Suppression de la sauce');
-            console.log(path.basename(sauce.imageUrl));
 
             sauceModel.deleteOne(where)
                 .then(result => {
@@ -474,13 +473,136 @@ exports.deleteSauce = (request, response) => {
  * @param response La réponse Htpp
  * @return Response
 */
-// TODO:développer le corps de la méthode
 exports.postSauceLike = (request, response) => {
 
-    const responseMessage = 'Merci pour votre opinion !';
+    const where = {
+        _id: request.params.id
+    };
 
-    return response.status(200).json({
-        message : responseMessage
-    });
+    log.output('-- Recherche de la sauce en base de données avec les paramètres : '+ JSON.stringify(where));
+    sauceModel.findOne(where)
+        .then(sauce => {
+
+            // Fonction interne mettant à jour les tableaux "usersLiked" et "usersDisliked"
+            // la fonction va ajouter ou retirer l'id utilisateur du tableau ciblé en fonction du statut : "like" ou "dislike"
+            // la fonction incrmente ou décrémente également le compteur
+            // @param adviceState Le statut(like ou dislike)
+            // @param direction Si le paramètre vaut "add", alors il s'agit d'un ajout du statut, si le paramètre vaut "remove", on retire le statut
+            // @return void
+            const updateAdviceState = (adviceState, direction) => {
+
+                if(!['like','dislike'].includes(adviceState)) {
+
+                    throw new Error('updateAdviceState error => Le paramètre adviceState n\'est pas défini correctement, la valeur doit être "like" ou "dislike".');
+
+                }
+
+                const adviceArrayName = adviceState === 'like' ? 'usersLiked' : 'usersDisliked';
+                const adviceCounterName = adviceState === 'like' ? 'likes' : 'dislikes';
+
+                if(direction === 'add') {
+
+                    // un utilisateur ne peut avoir qu'une seule valeur pour chaque sauce, donc il faut vérifier si l'utilisateur a déjà donné son avis
+                    if(!sauce[adviceArrayName].includes(request.locals.userId)) {
+
+                        // L'utilisateur n'a pas encore donné son avis
+                        // on on incémente le compteur et ajoute un nouvel utilisateur dans le tableau
+                        sauce[adviceCounterName]++;
+                        sauce[adviceArrayName].push(request.locals.userId);
+
+                    }
+
+                }
+                else if(direction === 'remove') {
+
+                    // Si l'utilisateur a déjà liké ou disliké la sauce et qu'il changé d'avis, il faut retirer le statut du tableau ciblé et décrémenter le compteur
+                    // sinon, on ne fait rien
+                    if(sauce[adviceArrayName].includes(request.locals.userId)) {
+
+                        sauce[adviceCounterName]--;
+
+                        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice
+                        sauce[adviceArrayName].splice(sauce[adviceArrayName].indexOf(request.locals.userId), 1);
+
+                    }
+
+                }
+                else {
+
+                    throw new Error('updateAdviceState error => Le paramètre direction n\'est pas défini correctement, la valeur doit être "add" ou "remove".');
+
+                }
+
+            }
+
+            if(sauce === null) throw new Error('=> La sauce n\'a pas été trouvée en base de données.');
+            else log.output('=> La sauce a été trouvée en base de données.', 'success');
+
+            log.output('-- Mise à jour du statut de la sauce (Like OU Dislike)');
+            const advice = request.body.like ?? -99; // Il faut gérer la nullabilité avec un ?? sinon la valeur 0 n'est pas prise en compte
+
+            let successMessage = '';
+            if(advice === 1) {
+
+                updateAdviceState('dislike','remove');
+                updateAdviceState('like','add');
+                successMessage = 'Votre Like a bien été pris en compte, Merci pour votre avis !';
+
+            }
+            else if(advice === -1) {
+
+                updateAdviceState('like','remove');
+                updateAdviceState('dislike','add');
+                successMessage = 'Votre Dislike a bien été pris en compte, Merci pour votre avis !';
+
+            }
+            else if(advice === 0) {
+
+                updateAdviceState('like','remove');
+                updateAdviceState('dislike','remove');
+                successMessage = 'Votre avis a bien été retiré.';
+
+            }
+            else {
+
+                throw new Error('La valeur "like" n\'est pas définie correctement, la valeur doit être -1, 0 ou 1.');
+
+            }
+
+            log.output('-- Mise à jour de la sauce en base de données');
+            sauceModel.updateOne(where, {
+                likes: sauce.likes,
+                dislikes: sauce.dislikes,
+                usersLiked: sauce.usersLiked,
+                usersDisliked: sauce.usersDisliked
+            })
+                .then(result => {
+
+                    if(result.modifiedCount === 1) {
+
+                        log.output('=> Réussite de la mise à jour de la sauce en base de données.', 'success');
+                        return response.status(200).json({
+                            message: successMessage
+                        });
+
+                    }
+
+                })
+                .catch(error => {
+
+                    log.output('=> Echec de la mise à jour de la sauce en base de données.', 'error');
+                    log.output(error.message, 'error');
+
+                    return response.status(400).json({ error });
+
+                });
+
+        })
+        .catch(error => {
+
+            log.output(error.message, 'error');
+            return response.status(400).json({ error });
+
+        });
 
 }
