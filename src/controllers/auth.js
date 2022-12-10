@@ -7,6 +7,7 @@
 
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const apiError = require('../apiError');
 const log = require('../consoleLog');
 
 const userModel = require('../models/user');
@@ -75,15 +76,13 @@ exports.signUp = (request, response) => {
     const passwordRegex = new RegExp('(?=(?:.*[A-Z À-Ü]){2,})(?=(?:.*[a-z à-ü]){3,})(?=(?:.*[0-9]){2,})(?=(?:.*[!@€#$£~%^&*()\_=+{};:¨,<.>-]){2,})', 'g');
     if(passwordRegex.test(password) === false || (/(.).*\1{2,}/.test(password) === true) || (/(123)|(789)|(321)|(987)/.test(password) === true) || password.length < 8) {
 
-        errors.push('Le mot de passe être complexe et doit contenir au moins 8 caractères dont 3 lettres en minuscule, 2 lettres en majuscule, 2 chiffres et 2 caractères spéciaux. Les caractères ne doivent pas se répeter plus de 2 fois.');
+        errors.push('Le mot de passe doit être complexe, il doit contenir au moins 8 caractères dont 3 lettres en minuscule, 2 lettres en majuscule, 2 chiffres et 2 caractères spéciaux. Les caractères ne doivent pas se répeter plus de 2 fois.');
 
     }
 
     if(errors.length > 0) {
 
-        return response.status(400).json(
-            { message: errors.join('/n') }
-        )
+        return apiError(response, 400, errors.join('/n'));
 
     }
 
@@ -115,9 +114,7 @@ exports.signUp = (request, response) => {
                         const path = element.path ?? '';
                         if(path === 'email' && kind === 'unique') {
 
-                            return response.status(400).json(
-                                { message: 'Cette adresse email est déjà associée à l\'un de nos utilisateurs.' }
-                            );
+                            return apiError(response, 400, 'Cette adresse email est déjà associée à l\'un de nos utilisateurs.');
 
                         }
 
@@ -126,9 +123,7 @@ exports.signUp = (request, response) => {
                         // On a parcourus le tableau sans trouver d'erreur connue, donc on retourne une erreur 500
                         if(it === saveErrors.length) {
 
-                            return response.status(500).json(
-                                { message: error }
-                            )
+                            return apiError(response, 500, 'userEntity save error', error);
 
                         }
 
@@ -141,9 +136,7 @@ exports.signUp = (request, response) => {
         })
         .catch(error => {
 
-            return response.status(500).json(
-                { message: error }
-            )
+            return apiError(response, 500, 'Crypt hash error', error);
 
         });
 
@@ -171,9 +164,7 @@ exports.login = (request, response) => {
     const ip = request.headers['x-forwarded-for'] || request.socket.remoteAddress || '';
     if(Object.keys(bannIP).includes(ip) && bannIP[ip] === 10) {
 
-        return response.status(500).json(
-            { message: 'Unknow error' }
-        )
+        return apiError(response, 500, 'Unknow error');
 
     }
 
@@ -189,9 +180,7 @@ exports.login = (request, response) => {
 
             if(userEntity === null) { // Aucun utilisateur trouvé en base avec cet email
 
-                return response.status(400).json(
-                    { message: 'Cette adresse email n\'est associée à aucun compte utilisateur.' }
-                )
+                return apiError(response, 401, 'Cette adresse email n\'est associée à aucun compte utilisateur.');
 
             }
             else { // L'utilisateur a bien été trouvé, on vérifie si le mot de passe match
@@ -221,9 +210,7 @@ exports.login = (request, response) => {
                             }
                             bannIP[ip] = Object.keys(bannIP).includes(ip) ? bannIP[ip] + 1 : 0;
 
-                            return response.status(400).json(
-                                { message: 'Le mot de passe n\'est pas correcte, merci de rectifier.' }
-                            )
+                            return apiError(response, 401, 'Le mot de passe n\'est pas correcte, merci de rectifier.');
 
                         }
                         else {
@@ -241,11 +228,7 @@ exports.login = (request, response) => {
                             }
                             catch(error) {
 
-                                log.output('jwt.sign Error', 'error');
-                                log.output(error.message, 'error');
-                                return response.status(500).json(
-                                    { message: error }
-                                )
+                                return apiError(response, 500, 'Token sign error', error);
 
                             }
 
@@ -254,11 +237,7 @@ exports.login = (request, response) => {
                     })
                     .catch(error => {
 
-                        log.output('bcrypt.compare Error', 'error');
-                        log.output(error.message, 'error');
-                        return response.status(500).json(
-                            { message: error }
-                        )
+                        return apiError(response, 500, 'Bcrypt compare Error', error);
 
                     });
 
@@ -267,9 +246,7 @@ exports.login = (request, response) => {
         })
         .catch(error => {
 
-            return response.status(500).json(
-                { message: error }
-            )
+            return apiError(response, 500, 'findOne Error', error);
 
         });
 }
