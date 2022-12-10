@@ -21,3 +21,7 @@ Répertoire du projet numéro 6 "Piiquante" de la formation Developpeur web d'Op
 
 ## En cas de problème rencontrés à l'execution de l'API
 Consulter les logs présents dans la console. Si besoin, mettre la valeur de variable d'environnement PIQUAPI_DEV à 1 pour obtenir davantage d'informations.
+
+## Gestion des erreurs Http
+La raison de l'echec est renseignée en valeur de la propriété "statusText", ainsi que dans la propriété "message" de l'objet JSON en réponse.\
+Si l'erreur est déclenchée par une fonction, l'API retourne un objet JSON contenant l'erreur telle qu'elle s'est produite, sans modification ni ajout.
