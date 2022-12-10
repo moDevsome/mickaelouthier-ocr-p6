@@ -8,8 +8,6 @@ const log = require('./consoleLog');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const { resolve } = require('path');
-const { rejects } = require('assert');
 
 /**
  * Fonction interne permettant de charger la configuration à partir du fichier ".env" se trouvant à la racine du répertoire d'execution de l'API
@@ -45,24 +43,24 @@ log.output('-- Démarrage de l\'API...');
 require('http').createServer( require('./api') ).listen(3000)
     .on('error', (error) => {
 
-        log.output('=> Echec du démarrage de l\'API', 'error');
+        log.error('=> Echec du démarrage de l\'API');
         console.error(error);
 
     })
     .on('listening', async () => {
 
-        log.output('=> L\'API est disponible sur l\'URL http://localhost:3000', 'success');
+        log.success('=> L\'API est disponible sur l\'URL http://localhost:3000');
 
         log.output('-- Chargement du fichier de configuration...');
         await loadConfiguration()
             .then(() => {
 
-                log.output('=> Réussite du chargement de la configuration.', 'success');
+                log.success('=> Réussite du chargement de la configuration.');
 
             })
             .catch(() => {
 
-                log.output('=> Échec du chargement de la configuration. Le fichier ".env" est absent ou corrompu.', 'error');
+                log.error('=> Échec du chargement de la configuration. Le fichier ".env" est absent ou corrompu.');
                 process.exit();
 
             })
@@ -76,13 +74,19 @@ require('http').createServer( require('./api') ).listen(3000)
             })
             .then(() => {
 
-                log.output('=> Réussite de la connexion à la base de données MongoDB.', 'success');
+                log.success('=> Réussite de la connexion à la base de données MongoDB.');
 
             })
             .catch(error => {
 
-                log.output('=> Echec de la connexion à la base de données MongoDB.', 'error');
-                console.error(error);
+                log.error('=> Echec de la connexion à la base de données MongoDB.');
+
+                if(process.env.PIQUAPI_DEV === '1') {
+
+                    console.error(error);
+
+                }
+
                 process.exit();
 
             });
