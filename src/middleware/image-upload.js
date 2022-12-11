@@ -6,6 +6,8 @@
 */
 
 const multer = require('multer');
+const fs = require('fs');
+const log = require('../consoleLog');
 
 /**
  * Fonction interne permettant de générer un nom de fichier le plus original possible (pas au sens artistique du terme...)
@@ -33,7 +35,33 @@ module.exports = multer({
 
     storage: multer.diskStorage({
         destination: (request, file, callback) => {
-            callback(null, 'images');
+
+            // On créé le dossier "images" si il n'existe pas
+            const osSeparator = require('os').homedir().split('\\').length ? '\\' : '/';
+            const imagesFolderPath = process.cwd() + osSeparator +'images'+ osSeparator;
+            if(!fs.existsSync(imagesFolderPath)) {
+
+                log.output('-- Création du répertoire "images"');
+                if(fs.mkdirSync(imagesFolderPath, 0700)) {
+
+                    log.error('=> Erreur à la création du répertoire "images".');
+                    callback(new Error('Erreur à la création du répertoire "images".'));
+
+                }
+                else {
+
+                    log.success('=> Le répertoire "images" a bien été créé.');
+                    callback(null, 'images');
+
+                }
+
+            }
+            else {
+
+                callback(null, 'images');
+
+            }
+
         },
         filename: (request, file, callback) => {
 
@@ -51,8 +79,10 @@ module.exports = multer({
             }
             else {
 
-                const extension = mimeTypes[file.mimetype];
+                // On créé le dossier image si il n'existe pas
+                //if(require('fs'))
 
+                const extension = mimeTypes[file.mimetype];
                 const uploadedFilename = generateFilename(extension);
                 callback(null, uploadedFilename);
 
