@@ -27,8 +27,8 @@ let bannIP = {};
 */
 const emailValidator = (email) => {
 
-    // TODO: il faut améliorer la regex ! le "-" n'est pas géré !!
-    return /^((?!\.)[\w-_.]*[^.])(@\w+)(\.\w+(\.\w+)?[^.\W])$/gim.test(email);
+    // https://regex101.com/r/mX1xW0/1
+    return /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i.test(email);
 
 }
 
@@ -99,6 +99,7 @@ exports.signUp = (request, response) => {
             userEntity.save()
                 .then(result => {
 
+                    log.success('=> Réussite de la création de l\'utilisateur.');
                     return response.status(200).json(
                         { message: 'Votre compte a bien été créé. Nous sommes heureux de vous compter parmis nos utilisateurs.' }
                     )
@@ -217,7 +218,7 @@ exports.login = (request, response) => {
 
                             try {
 
-                                log.output('=> Réussite de la connexion de l\'utilisateur.', 'success')
+                                log.success('=> Réussite de la connexion de l\'utilisateur.');
                                 return response.status(200).json(
                                     {
                                         userId: userEntity._id,
