@@ -6,6 +6,7 @@
  */
 
 const log = require('../consoleLog');
+const apiError = require('../apiError');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -83,9 +84,12 @@ exports.getSauces = (request, response) => {
         sauces => response.status(200).json(sauces)
     )
     .catch(
-        error => response.status(500).json({
-            error
-        })
+        error => {
+
+            log.error('Echec de la recherche des sauces en base de données.');
+            return apiError(response, 500, 'Echec de la recherche des sauces en base de données', error);
+
+        }
     );
 
 }
@@ -111,9 +115,12 @@ exports.getSauce = (request, response) => {
         sauce => response.status(200).json(sauce)
     )
     .catch(
-        error => response.status(500).json({
-            error
-        })
+        error => {
+
+            log.error('La sauce n\'a pas été trouvée en base de données.');
+            return apiError(response, 500, 'La sauce n\'a pas été trouvée en base de données.', error);
+
+        }
     );
 
 }
@@ -144,8 +151,8 @@ exports.postSauce = async (request, response) => {
     }
     catch(error) {
 
-        log.output('Echec lors du parse du request body. '+ error.message);
-        return response.status(500).json({ error });
+        log.error('Echec lors du parse du request body. '+ error.message);
+        return apiError(response, 500, 'Echec lors du parse du request body.', error);
 
     }
 
@@ -158,14 +165,13 @@ exports.postSauce = async (request, response) => {
     const imageFilePath = process.cwd() + osSeparator +'images'+ osSeparator + imageFilename;
     if(!fs.existsSync(imageFilePath)) {
 
-        log.output('Echec du téléchargement de l\'image.');
-        return response.status(500).json({
-            message: 'Echec du téléchargement de l\'image.'
-        });
+        log.error('Echec du téléchargement de l\'image.');
+        return apiError(response, 500, 'Echec du téléchargement de l\'image.');
 
     }
     else {
 
+        log.success('Réussite du téléchargement de l\'image.');
         sauceData.imageUrl = request.protocol +'://'+ request.get('host') +'/images/'+ imageFilename;
 
     }
@@ -183,7 +189,7 @@ exports.postSauce = async (request, response) => {
     sauceEntity.save()
         .then(() => {
 
-            log.output('=> Réussite de la création de la sauce en base de données', 'success');
+            log.success('=> Réussite de la création de la sauce en base de données');
 
             return response.status(200).json(
                 { message: 'La sauce a bien été ajoutée. Merci pour votre participation.' }
@@ -192,25 +198,23 @@ exports.postSauce = async (request, response) => {
         })
         .catch(saveError => {
 
-            log.output('=> Echec de la création de la sauce en base de données', 'error');
+            log.error('=> Echec de la création de la sauce en base de données.');
 
             // On supprime l'image pour éviter une consommation illégitime de l'espace disque
             deleteImage(sauceData.imageUrl)
                 .then(() => {
 
-                    log.output('L\'image a été supprimée.','success');
+                    log.success('=> L\'image a été supprimée.');
 
                 })
                 .catch(error => {
 
-                    log.output('Erreur à la suppression de l\'image.', 'error');
-                    log.output(error.message ,'error');
+                    log.error('=> Erreur à la suppression de l\'image.');
+                    log.error(error.message);
 
                 })
 
-                return response.status(500).json(
-                    { saveError }
-                )
+                return apiError(response, 500, 'Echec de la création de la sauce en base de données.', saveError);
         });
 
 }
@@ -257,8 +261,8 @@ exports.putSauce = async (request, response) => {
         }
         catch(error) {
 
-            log.output('Echec lors du parse du request body. '+ error.message);
-            return response.status(500).json({ error });
+            log.error('Echec lors du parse du request body. '+ error.message);
+            return apiError(response, 500, 'Echec lors du parse du request body.', error);
 
         }
 
@@ -270,10 +274,8 @@ exports.putSauce = async (request, response) => {
         const imageFilePath = process.cwd() + osSeparator +'images'+ osSeparator + imageFilename;
         if(!fs.existsSync(imageFilePath)) {
 
-            log.output('Echec du téléchargement de l\'image.');
-            return response.status(500).json({
-                message: 'Echec du téléchargement de l\'image.'
-            });
+            log.error('Echec du téléchargement de l\'image.');
+            return apiError(response, 500, 'Echec du téléchargement de l\'image.');
 
         }
         else {
@@ -289,7 +291,8 @@ exports.putSauce = async (request, response) => {
         userId: request.locals.userId
     };
 
-    log.output('-- Recherche de la sauce en base de données avec les paramètres : '+ JSON.stringify(where));
+    if(process.env.PIQUAPI_DEV === '1') log.output('-- Recherche de la sauce en base de données avec les paramètres : '+ JSON.stringify(where));
+    else log.output('-- Recherche de la sauce en base de données');
     sauceModel.findOne(where)
         .then(sauce => {
 
@@ -304,7 +307,7 @@ exports.putSauce = async (request, response) => {
 
                     if(result.modifiedCount === 1) {
 
-                        log.output('=> Réussite de la mise à jour de la sauce en base de données.', 'success');
+                        log.success('=> Réussite de la mise à jour de la sauce en base de données.');
 
                         // Si l'image a été mise à jour, on supprime l'ancienne image
                         if(imageFilename !== 'NO-image') {
@@ -312,13 +315,13 @@ exports.putSauce = async (request, response) => {
                             deleteImage(currentImageFilename)
                                 .then(() => {
 
-                                    log.output('L\'ancienne image a été supprimée.','success');
+                                    log.success('L\'ancienne image a été supprimée.');
 
                                 })
                                 .catch(error => {
 
-                                    log.output('L\'ancienne image n\'a pas été supprimée.', 'error');
-                                    log.output(error.message ,'error');
+                                    log.error('L\'ancienne image n\'a pas été supprimée.');
+                                    log.error(error.message);
 
                                 })
 
@@ -339,8 +342,8 @@ exports.putSauce = async (request, response) => {
                 })
                 .catch(error => {
 
-                    log.output('=> Echec de la mise à jour de la sauce en base de données.', 'error');
-                    log.output(error.message, 'error');
+                    log.error('=> Echec de la mise à jour de la sauce en base de données.');
+                    log.error(error.message);
 
                     // On supprime la nouvelle image pour éviter une consommation illégitime de l'espace disque
                     if(imageFilename !== 'NO-image') {
@@ -348,27 +351,29 @@ exports.putSauce = async (request, response) => {
                         deleteImage(sauce.imageUrl)
                             .then(() => {
 
-                                log.output('L\'image a été supprimée.','success');
+                                log.success('L\'image a été supprimée.','success');
 
                             })
                             .catch(error => {
 
-                                log.output('Erreur à la suppression de l\'image.', 'error');
-                                log.output(error.message ,'error');
+                                log.error('Erreur à la suppression de l\'image.');
+                                log.error(error.message ,'error');
 
                             })
 
                     }
 
-                    return response.status(400).json({ error });
+                    // return response.status(400).json({ error });
+                    return apiError(response, 500, 'Echec de la mise à jour de la sauce en base de données.', error);
 
                 });
 
         })
         .catch(error => {
 
-            log.output(error.message, 'error');
-            return response.status(400).json({ error });
+            log.error(error.message);
+            // return response.status(400).json({ error });
+            return apiError(response, 500, 'Echec de la recherche de la sauce en base de données.', error);
 
         });
 
@@ -393,12 +398,13 @@ exports.deleteSauce = (request, response) => {
         userId: request.locals.userId
     };
 
-    log.output('-- Recherche de la sauce en base de données avec les paramètres : '+ JSON.stringify(where));
+    if(process.env.PIQUAPI_DEV === '1') log.output('-- Recherche de la sauce en base de données avec les paramètres : '+ JSON.stringify(where));
+    else log.output('-- Recherche de la sauce en base de données');
     sauceModel.findOne(where)
         .then(sauce => {
 
             if(sauce === null) throw new Error('=> La sauce n\'a pas été trouvée en base de données');
-            else log.output('=> La sauce a été trouvée en base de données', 'success');
+            else log.success('=> La sauce a été trouvée en base de données');
 
             log.output('-- Suppression de la sauce');
 
@@ -408,18 +414,18 @@ exports.deleteSauce = (request, response) => {
 
                     if(result.deletedCount === 1) {
 
-                        log.output('=> Réussite de la suppression de la sauce.', 'success');
+                        log.success('=> Réussite de la suppression de la sauce.');
 
                         deleteImage(sauce.imageUrl)
                             .then(() => {
 
-                                log.output('L\'image de la sauce a été supprimée.','success');
+                                log.success('L\'image de la sauce a été supprimée.');
 
                             })
                             .catch(error => {
 
-                                log.output('L\'image de la sauce n\'a pas été supprimée.','error');
-                                log.output(error.message ,'error');
+                                log.error('L\'image de la sauce n\'a pas été supprimée.');
+                                log.error(error.message);
 
                             })
 
@@ -438,17 +444,19 @@ exports.deleteSauce = (request, response) => {
                 })
                 .catch(error => {
 
-                    log.output('=> Echec de la suppression de la base.', 'error');
-                    log.output(error.message, 'error');
-                    return response.status(400).json({ error });
+                    log.error('=> Echec de la suppression de la base.');
+                    log.error(error.message);
+
+                    // return response.status(400).json({ error });
+                    return apiError(response, 500, 'Echec de la suppression de la sauce.', error);
 
                 });
 
         })
         .catch(error => {
 
-            log.output(error.message, 'error');
-            return response.status(400).json({ error });
+            log.error(error.message);
+            return apiError(response, 500, 'Echec de la recherche de la sauce.', error);
 
         });
 
@@ -479,7 +487,8 @@ exports.postSauceLike = (request, response) => {
         _id: request.params.id
     };
 
-    log.output('-- Recherche de la sauce en base de données avec les paramètres : '+ JSON.stringify(where));
+    if(process.env.PIQUAPI_DEV === '1') log.output('-- Recherche de la sauce en base de données avec les paramètres : '+ JSON.stringify(where));
+    else log.output('-- Recherche de la sauce en base de données');
     sauceModel.findOne(where)
         .then(sauce => {
 
@@ -536,7 +545,7 @@ exports.postSauceLike = (request, response) => {
             }
 
             if(sauce === null) throw new Error('=> La sauce n\'a pas été trouvée en base de données.');
-            else log.output('=> La sauce a été trouvée en base de données.', 'success');
+            else log.success('=> La sauce a été trouvée en base de données.');
 
             log.output('-- Mise à jour du statut de la sauce (Like OU Dislike)');
             const advice = request.body.like ?? -99; // Il faut gérer la nullabilité avec un ?? sinon la valeur 0 n'est pas prise en compte
@@ -580,7 +589,7 @@ exports.postSauceLike = (request, response) => {
 
                     if(result.modifiedCount === 1) {
 
-                        log.output('=> Réussite de la mise à jour de la sauce en base de données.', 'success');
+                        log.success('=> Réussite de la mise à jour de la sauce en base de données.');
                         return response.status(200).json({
                             message: successMessage
                         });
@@ -590,18 +599,18 @@ exports.postSauceLike = (request, response) => {
                 })
                 .catch(error => {
 
-                    log.output('=> Echec de la mise à jour de la sauce en base de données.', 'error');
-                    log.output(error.message, 'error');
+                    log.error('=> Echec de la mise à jour de la sauce en base de données.');
+                    log.error('sauceModel.updateOne : '+ error.message);
 
-                    return response.status(400).json({ error });
+                    return apiError(response, 500, 'Echec de la mise à jour de la sauce en base de données.', error);
 
                 });
 
         })
         .catch(error => {
 
-            log.output(error.message, 'error');
-            return response.status(400).json({ error });
+            log.error('sauceModel.findOne : '+ error.message);
+            return apiError(response, 500, 'Echec de la recherche de la sauce en base de données.', error);
 
         });
 
